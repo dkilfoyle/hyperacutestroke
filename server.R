@@ -1,6 +1,6 @@
 library(shiny)
-library(shinyTime)
 library(dplyr)
+library(shinyjs)
 
 shinyServer(function(input, output, session) {
   
@@ -26,14 +26,18 @@ shinyServer(function(input, output, session) {
   
   fields = c(
     "NHI",
-    "StrokeOnsetTime",
+    "StrokeOnsetTime_date",
+    "StrokeOnsetTime_time",
     "CurrentLocation",
     "Completed",
     
     pastaFields,
     lamsFields,
     "pastaNeurologist",
-    "amboDepartSceneTime"
+    "amboDepartSceneTime_date",
+    "amboDepartSceneTime_time",
+    "HospitalArrivalTime_date",
+    "HospitalArrivalTime_time"
   )
 
   getPatients = reactive({
@@ -61,13 +65,16 @@ shinyServer(function(input, output, session) {
     formData <- sapply(fields, function(x) input[[x]])
     formData
   })
+  
+  # NEW PATIENT
+  # ======================================
 
   observeEvent(input$btnNewPatient, {
     showModal(modalDialog(
       title = "Start New Patient",
-      textInput("newptNHI", "NHI", value=""),
-      selectInput("newptLocation", "Current Location", choices=c("Unknown","PreHospital","Resus/CT", "Angio/PACU", "Wd63","DCC","Other")),
-      datetimeInput("newptStrokeOnsetTime", "Symptom Onset Date and Time"),
+        textInput("newptNHI", "NHI", value=""),
+        selectInput("newptLocation", "Current Location", choices=c("Unknown","PreHospital","Resus/CT", "Angio/PACU", "Wd63","DCC","Other")),
+        datetimeInput("newptStrokeOnsetTime", "Symptom Onset Date and Time"),
       footer = tagList(
         modalButton("Cancel"),
         actionButton("btnNewPatientOK", "OK")
@@ -97,12 +104,13 @@ shinyServer(function(input, output, session) {
     )
   }
   
-  
-  
+  # new patient modal dialog OK
   observeEvent(input$btnNewPatientOK, {
     if (!is.null(input$newptNHI)) {
       vals$currentNHI = input$newptNHI
       vals$patients = rbind(getPatients(), newPatient(NHI = input$newptNHI, Location=input$newptLocation, StrokeOnsetTime = input$newptStrokeOnsetTime))
+      updateDateInput(session, "StrokeOnsetTime_date", value=input$newptStrokeOnsetTime_date)
+      updateTimeInput(session, "StrokeOnsetTime_time", value=input$newptStrokeOnsetTime_time)
       removeModal()
     }
   })
@@ -115,10 +123,27 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # CLOCKS
+  # =============================
+  
+  # update clocks after NHI change
   observe({
-    # if (input$selCurrentNHI != "")
-      # runjs("$('#onsetTimer').FlipClock({});")
+    if (input$NHI != "") {
+      x = getDateTime("StrokeOnsetTime")
+      if (!is.na(x)) {
+        elapsedmins = difftime(now(), x, units="mins")
+        runjs(paste0("clock[0].setTime(", elapsedmins, "); clock[0].start();"))
+      }
+      x = getDateTime("HospitalArrivalTime")
+      if (!is.na(x)) {
+        elapsedmins = difftime(now(), x, units="mins")
+        runjs(paste0("clock[1].setTime(", elapsedmins, "); clock[1].start();"))
+      }
+    }
   })
+  
+  # PASTA
+  # ==============================
   
   # automatic calculation of LAMS Total
   observe({
@@ -139,8 +164,29 @@ shinyServer(function(input, output, session) {
     else
       div(class="alert alert-warning",
         p("Patient must meet all criteria above. If patient did not meet all criteria transfer to nearest ED as usual."))
+    
   })
   
-
+  # TIME
+  # ============================
+  
+  setDateTime = function(id, datetime) {
+    updateDateInput(session, paste0(id,"_date"), value=datetime)
+    updateTimeInput(session, paste0(id,"_time"), value=datetime)
+  }
+  
+  getDateTime = function(id) {
+    mydate = input[[paste0(id,"_date")]]
+    mytime = strftime(input[[paste0(id,"_time")]], format="%H:%M")
+    parse_date_time(paste0(mydate," ",mytime), "Ymd HM", tz="Pacific/Auckland")
+  }
+  
+  observeEvent(input$newptStrokeOnsetTime_now, { setDateTime("newptStrokeOnsetTime", now()) })
+  observeEvent(input$StrokeOnsetTime_now, { setDateTime("StrokeOnsetTime", now()) })
+  observeEvent(input$amboDepartSceneTime_now, { setDateTime("amboDepartSceneTime", now()) })
+  observeEvent(input$HospitalArrivalTime_now, { setDateTime("HospitalArrivalTime", now()) })
+  observeEvent(input$CTTime_now, { setDateTime("CTTime", now()) })
+  observeEvent(input$ThrombolysisTime_now, { setDateTime("ThrombolysisTime", now()) })
+  observeEvent(input$ClotRetrievalTime_now, { setDateTime("ClotRetrievalTime", now()) })
 
 })

@@ -58,31 +58,52 @@ shinyUI(fluidPage(
           fluidRow(
             column(width=12, uiOutput("htmlPASTAResult")))),
         
+        tabPanel("Neurologist", style="margin-top:20px"),
+        
         tabPanel("Resus", style="margin-top:20px",
           div(class="alert alert-info",
             p("Patient should be briefly examined for ABC on ambulance stretcher without connection to resus equipment. If stable patient to be taken on ambulance stretcher immediately to CT for CT + CTA. Send resus bed to collect patient after CT.")),
           
-          datetimeInput("datetimeHospitalArrival", "Hospital Arrival Date and Time"),
-          datetimeInput("datetimeCT", "CT Date and Time"),
+          datetimeInput("HospitalArrivalTime", "Hospital Arrival Date and Time"),
+          datetimeInput("CTTime", "CT Date and Time"),
           
           selectInput("selInitialDiagnosis", "Resus Diagnosis", choices=c("ICH","Ischemic stroke with LVO", "Ischemic stroke without LVO", "TIA", "Stroke Mimic", "Other")),
-          numericInput("numNIHSS", "NIHSS", value=0),
+          numericInput("NIHSS", "NIHSS", value=0),
           
-          checkboxInput("chkThrombolysis", "Thrombolysed?"),
-          conditionalPanel(condition="input.chkThrombolysis == true",
-            datetimeInput("datetimeThrombolysis","Thrombolysis Date and Time", width="100%"))),
+          checkboxInput("Thrombolysis", "Thrombolysed?"),
+          conditionalPanel(condition="input.Thrombolysis == true",
+            datetimeInput("ThrombolysisTime","Thrombolysis Date and Time"))),
           
         tabPanel("Angio", style="margin-top:20px",
-          checkboxInput("chkClotRetrieval", "Clot retrieval or angiography performed?"),
-          conditionalPanel(condition="input.chkClotRetrieval == true",
-            datetimeInput("datetimeClotRetrieval","Clot Retrieval Groin Date and Time"),
-            selectInput("selClotRetrievalOutcome", "Clot Retrieval Outcome", choices=c("Success", "Technical Failure", "Angiography Only")))),
+          checkboxInput("ClotRetrieval", "Clot retrieval or angiography performed?"),
+          conditionalPanel(condition="input.ClotRetrieval == true",
+            datetimeInput("ClotRetrievalTime","Clot Retrieval Groin Date and Time"),
+            selectInput("ClotRetrievalOutcome", "Clot Retrieval Outcome", choices=c("Success", "Technical Failure", "Angiography Only")))),
         
         tabPanel("Ward", style="margin-top:20px",
-          dateInput("dateDischarge","Discharge Date"),
-          selectInput("selDischargeType","Discharge Destination", choices=c("Another DHB","Home", "Rehab")),
-          conditionalPanel("input.chkThrombolysis == true || input.chkClotRetrieval == true",
-            checkboxInput("chkSICH", "Symptomatic ICH"))),
+          dateInput("DischargeDate","Discharge Date"),
+          selectInput("DischargeType","Discharge Destination", choices=c("Another DHB","Home", "Rehab")),
+          conditionalPanel("input.Thrombolysis == true || input.ClotRetrieval == true",
+            checkboxInput("SICH", "Symptomatic ICH"))),
+        
+        tabPanel("Patient", style="margin-top:20px",
+          datetimeInput("StrokeOnsetTime", "Stroke Symptom Onset Date and Time"),
+          selectInput("PathwayInitiation", "Hyperacute pathway initiation point", choices=c(
+            "Unknown",
+            "Community ADHB area",
+            "Community PASTA",
+            "WDHB ED",
+            "ADHB ED",
+            "ADHB Ward",
+            "CMDHB ED",
+            "Northland DHB",
+            "Waikato DHB",
+            "Other DHB",
+            "Other location"
+          )),
+          textInput("MRS3months", "MRS at 3 months"),
+          checkboxInput("Completed", "Patient record completed", value=F)
+        ),
         
         id="mainTabset"
       ) # tabset

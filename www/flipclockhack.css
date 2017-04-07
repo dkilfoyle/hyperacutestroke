@@ -1,0 +1,9 @@
+.flip-clock-label,
+.flip-clock-divider.days,
+.flip-clock-divider.hours,
+.flipclockdiv ul:nth-child(1),
+.flipclockdiv ul:nth-child(2),
+.flipclockdiv ul:nth-child(3)
+{
+  display: none;
+}

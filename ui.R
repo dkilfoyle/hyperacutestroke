@@ -22,6 +22,7 @@ shinyUI(fluidPage(
       conditionalPanel(condition="input.NHI != ''",
         titledPanel("Current Patient",
           flipclock("onsetTimer", "Time since stroke onset"),
+          # dkjustgageOutput("onsetGage", width="70%", height="150px"),
           flipclock("doorTimer", "Time since hospital arrival"))),
 
     width=3),
@@ -58,7 +59,22 @@ shinyUI(fluidPage(
           fluidRow(
             column(width=12, uiOutput("htmlPASTAResult")))),
         
-        tabPanel("Neurologist", style="margin-top:20px"),
+        tabPanel("Neurologist", style="margin-top:20px",
+          div(class="alert alert-info",
+              p("PASTA triage philosophy: Is the patient more likely to be advantaged than disadvantaged by diverting past local ED. To be advantaged the patient should be a potential hyperacute intervention candidation. Patients where either stroke or hyperacute intervention are unlikely may be disadvantaged by diversion. 
+                The decision rests with the oncall neurologist who is at liberty to deviate from the pathway criteria based on a case by case basis")),
+          div(class="alert alert-warning",
+              p("Patient accepted for diversion: call XXX-XXXX and ask for 'Hyperacute Stroke Code: ETA resus xx min'"),
+              p("Patient accepted for clot retrieval: call XXX-XXXX and ask for 'Stroke Clot Retrieval Code: ETA resus xx min'")),
+          titledPanel("PASTA and Prehospital",
+            selectInput("pastaNeurologistDecision","PreHospital Triage Decision", choices=c(
+              "Not applicable",
+              "Patient Accepted",
+              "Diagnostic uncertainty",
+              "Functional or comorbid status",
+              "Unfavourable timeframe",
+              "PreADHB imaging unfavourable"
+            )))),
         
         tabPanel("Resus", style="margin-top:20px",
           div(class="alert alert-info",

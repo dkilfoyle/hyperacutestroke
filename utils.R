@@ -39,6 +39,7 @@ $(document).ready(function() {
     var i = 0;
     $('.flipclockdiv').each(function() {
         clock[i] = $(this).FlipClock({
+            clockFace: 'DailyCounter',
             autoStart: false,
             showSeconds: false});
         i++;
@@ -50,7 +51,7 @@ $(document).ready(function() {
 flipclockDependency = htmlDependency("flipclockDependency", version="1",
                                     src = "www",
                                     script = "flipclock.js",
-                                    stylesheet = "flipclock.css",
+                                    stylesheet = c("flipclock.css", "flipclockhack.css"),
                                     head = clockjs)
 
 flipclock = function(id, label) {
@@ -98,4 +99,19 @@ datetimeInput = function(inputId, label, datevalue = NULL, datemin = NULL, datem
 
       actionButton(paste0(inputId,"_now"), "Now", style="display:inline-block; vertical-align:top;")
   )
+}
+
+updateDateInput2 = function (session, inputId, label = NULL, value = NULL, min = NULL, max = NULL) 
+{
+  formatDate <- function(x) {
+    if (is.null(x)) 
+      return(NULL)
+    format(as.Date(x, tz="Pacific/Auckland"), "%Y-%m-%d")
+  }
+  value <- formatDate(value)
+  min <- formatDate(min)
+  max <- formatDate(max)
+  message <- shiny:::dropNulls(list(label = label, value = value, min = min, 
+                            max = max))
+  session$sendInputMessage(inputId, message)
 }

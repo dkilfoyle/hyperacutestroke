@@ -123,25 +123,6 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # CLOCKS
-  # =============================
-  
-  # update clocks after NHI change
-  observe({
-    if (input$NHI != "") {
-      x = getDateTime("StrokeOnsetTime")
-      if (!is.na(x)) {
-        elapsedmins = difftime(now(), x, units="mins")
-        runjs(paste0("clock[0].setTime(", elapsedmins, "); clock[0].start();"))
-      }
-      x = getDateTime("HospitalArrivalTime")
-      if (!is.na(x)) {
-        elapsedmins = difftime(now(), x, units="mins")
-        runjs(paste0("clock[1].setTime(", elapsedmins, "); clock[1].start();"))
-      }
-    }
-  })
-  
   # PASTA
   # ==============================
   
@@ -167,11 +148,44 @@ shinyServer(function(input, output, session) {
     
   })
   
+  # CLOCKS
+  # =============================
+  
+  # update clocks after NHI change
+  observe({
+    if (input$NHI != "") {
+      # id="StrokeOnsetTime"
+      # mydate = input[[paste0(id,"_date")]]
+      # mytime = strftime(input[[paste0(id,"_time")]], format="%H:%M")
+      # x = parse_date_time(paste0(mydate," ",mytime), "Ymd HM", tz="Pacific/Auckland")
+      # elapsedmins = difftime(now(tzone="Pacific/Auckland"), x, units="mins")
+      # print(mydate)
+      # print(mytime)
+      # print(x)
+      # print(now(tzone="Pacific/Auckland"))
+      # print(elapsedmins)
+      
+      x = getElapsedTime("StrokeOnsetTime")
+      
+      if (!is.na(x)) {
+        runjs(sprintf("clock[0].setTime(%i); clock[0].start();", x*60))
+      }
+      x = getElapsedTime("HospitalArrivalTime")
+      if (!is.na(x)) {
+        runjs(sprintf("clock[1].setTime(%i); clock[1].start();", x*60))
+      }
+    }
+  })
+  
+  output$onsetGage = renderDkjustgage({
+    dkjustgage(getElapsedTime("StrokeOnsetTime"),min=0,max=60)
+  })
+  
   # TIME
   # ============================
   
   setDateTime = function(id, datetime) {
-    updateDateInput(session, paste0(id,"_date"), value=datetime)
+    updateDateInput2(session, paste0(id,"_date"), value=datetime)
     updateTimeInput(session, paste0(id,"_time"), value=datetime)
   }
   
@@ -181,12 +195,21 @@ shinyServer(function(input, output, session) {
     parse_date_time(paste0(mydate," ",mytime), "Ymd HM", tz="Pacific/Auckland")
   }
   
-  observeEvent(input$newptStrokeOnsetTime_now, { setDateTime("newptStrokeOnsetTime", now()) })
-  observeEvent(input$StrokeOnsetTime_now, { setDateTime("StrokeOnsetTime", now()) })
-  observeEvent(input$amboDepartSceneTime_now, { setDateTime("amboDepartSceneTime", now()) })
-  observeEvent(input$HospitalArrivalTime_now, { setDateTime("HospitalArrivalTime", now()) })
-  observeEvent(input$CTTime_now, { setDateTime("CTTime", now()) })
-  observeEvent(input$ThrombolysisTime_now, { setDateTime("ThrombolysisTime", now()) })
-  observeEvent(input$ClotRetrievalTime_now, { setDateTime("ClotRetrievalTime", now()) })
-
+  getElapsedTime = function(id) {
+    x = getDateTime(id)
+    if (!is.na(x)) {
+      elapsedmins = difftime(now(tzone="Pacific/Auckland"), x, units="mins")
+      return(as.integer(elapsedmins))
+    }
+    return(NA)
+  }
+  
+  observeEvent(input$newptStrokeOnsetTime_now, { setDateTime("newptStrokeOnsetTime", now(tzone="Pacific/Auckland")) })
+  observeEvent(input$StrokeOnsetTime_now, { setDateTime("StrokeOnsetTime", now(tzone="Pacific/Auckland")) })
+  observeEvent(input$amboDepartSceneTime_now, { setDateTime("amboDepartSceneTime", now(tzone="Pacific/Auckland")) })
+  observeEvent(input$HospitalArrivalTime_now, { setDateTime("HospitalArrivalTime", now(tzone="Pacific/Auckland")) })
+  observeEvent(input$CTTime_now, { setDateTime("CTTime", now(tzone="Pacific/Auckland")) })
+  observeEvent(input$ThrombolysisTime_now, { setDateTime("ThrombolysisTime", now(tzone="Pacific/Auckland")) })
+  observeEvent(input$ClotRetrievalTime_now, { setDateTime("ClotRetrievalTime", now(tzone="Pacific/Auckland")) })
+  
 })

@@ -2,44 +2,54 @@ library(shiny)
 library(dplyr)
 library(shinyjs)
 
+fields = read.table(header=T, text = "
+Name                        Group         Type
+NHI                         Patient       text
+StrokeOnsetTime_date        Patient       date
+StrokeOnsetTime_time        Patient       time
+CurrentLocation             Patient       selecttext
+pastaAfterhours             Pasta         bool
+pastaWTK                    Pasta         bool
+pastaAge                    Pasta         bool
+pastaFunction               Pasta         bool
+pastaBSL                    Pasta         bool
+pastaGCS                    Pasta         bool
+pastaOnsetTime              Pasta         bool
+pastaLAMS                   Pasta         bool
+pastaLAMSFace               LAMS          radionum
+pastaLAMSArm                LAMS          radionum
+pastaLAMSGrip               LAMS          radionum
+pastaNeurologistAccepted    Pasta2        bool
+pastaDepartSceneTime_date   Pasta2        date
+pastaDepartSceneTime_time   Pasta2        time
+NeurologistTriageDecision   Neurologist   selecttext
+HospitalArrivalTime_date    Resus         date
+HospitalArrivalTime_time    Resus         time
+CTTime_date                 Resus         date
+CTTime_time                 Resus         time
+ResusDiagnosis              Resus         selecttext
+NIHSS                       Resus         num
+Thrombolysis                Resus         bool
+ThrombolysisTime_date       Resus         date
+ThrombolysisTime_time       Resus         time
+ClotRetrieval               Angio         bool
+ClotRetrievalTime_date      Angio         date
+ClotRetrievalTime_time      Angio         time    
+ClotRetrievalOutcome        Angio         selecttext
+DischargeDate               Ward          date
+DischargeType               Ward          selecttext
+SICH                        Ward          bool
+PathwayInitiation           Patient       selecttext
+MRS3Months                  Patient       num
+Completed                   Patient       bool
+")
+
 shinyServer(function(input, output, session) {
   
   vals = reactiveValues(
     currentNHI = ""
   )
   
-  pastaFields = c(
-    "pastaAfterhours",
-    "pastaWTK",
-    "pastaAge",
-    "pastaFunction",
-    "pastaBSL",
-    "pastaGCS",
-    "pastaOnsetTime",
-    "pastaLAMS")
-
-  lamsFields = c(
-    "pastaLAMSFace",
-    "pastaLAMSArm",
-    "pastaLAMSGrip"
-  )
-  
-  fields = c(
-    "NHI",
-    "StrokeOnsetTime_date",
-    "StrokeOnsetTime_time",
-    "CurrentLocation",
-    "Completed",
-    
-    pastaFields,
-    lamsFields,
-    "pastaNeurologist",
-    "amboDepartSceneTime_date",
-    "amboDepartSceneTime_time",
-    "HospitalArrivalTime_date",
-    "HospitalArrivalTime_time"
-  )
-
   getPatients = reactive({
     if (is.null(vals[["patients"]])) {
       # TODO: Implement saving/loading
@@ -82,6 +92,18 @@ shinyServer(function(input, output, session) {
     ))
   })
   
+  # new patient modal dialog OK
+  observeEvent(input$btnNewPatientOK, {
+    if (!is.null(input$newptNHI)) {
+      vals$currentNHI = input$newptNHI
+      vals$patients = rbind(getPatients(), newPatient(NHI = input$newptNHI, Location=input$newptLocation, StrokeOnsetTime = input$newptStrokeOnsetTime))
+      updateDateInput(session, "StrokeOnsetTime_date", value=input$newptStrokeOnsetTime_date)
+      updateTimeInput(session, "StrokeOnsetTime_time", value=input$newptStrokeOnsetTime_time)
+      updateSelectInput(session, "CurrentLocation", selected=input$newptLocation)
+      removeModal()
+    }
+  })
+  
   newPatient = function(NHI, Location, StrokeOnsetTime) {
     res = cbind(
       NHI = NHI,
@@ -104,17 +126,6 @@ shinyServer(function(input, output, session) {
     )
   }
   
-  # new patient modal dialog OK
-  observeEvent(input$btnNewPatientOK, {
-    if (!is.null(input$newptNHI)) {
-      vals$currentNHI = input$newptNHI
-      vals$patients = rbind(getPatients(), newPatient(NHI = input$newptNHI, Location=input$newptLocation, StrokeOnsetTime = input$newptStrokeOnsetTime))
-      updateDateInput(session, "StrokeOnsetTime_date", value=input$newptStrokeOnsetTime_date)
-      updateTimeInput(session, "StrokeOnsetTime_time", value=input$newptStrokeOnsetTime_time)
-      removeModal()
-    }
-  })
-  
   # update current NHI selection following creation of a new patient
   observe({
     NHIs = as.vector(getCurrentPatients()$NHI)
@@ -132,20 +143,12 @@ shinyServer(function(input, output, session) {
     updateCheckboxInput(session, "pastaLAMS", value=(lamsFace>2))
   })
   
-  output$htmlPASTAResult = renderUI({
-    #TODO make conditional panel in ui
-    #calculate pastaPassed as 
-    res=sapply(pastaFields, function(x) input[[x]])
-    if (all(res)) 
-      div(class="alert alert-success",
-        helpText("Patient meets all criteria, now ring 021-XXX-XXXX for final confirmation with oncall neurologist."),
-        radioButtons("radNeurologistAccepted", "Was the patient accepted by the oncall neurologist?", choices=c("Yes","No"), width="100%"),
-        helpText("If the patient is accepted by the oncall neurologist transport patient directly to ACH resus. If not accepted transfer to nearest ED as usual."),
-        datetimeInput("pastaDepartSceneTime", "Depart Scene Date and Time"))
+  observe({
+    res=sapply(as.vector(fields$Name[fields$Group=="Pasta"]), function(x) input[[x]])
+    if(all(res))
+      updateTextInput(session, "pastaResult", value="PASSED")
     else
-      div(class="alert alert-warning",
-        p("Patient must meet all criteria above. If patient did not meet all criteria transfer to nearest ED as usual."))
-    
+      updateTextInput(session, "pastaResult", value="FAILED")
   })
   
   # CLOCKS
@@ -154,19 +157,7 @@ shinyServer(function(input, output, session) {
   # update clocks after NHI change
   observe({
     if (input$NHI != "") {
-      # id="StrokeOnsetTime"
-      # mydate = input[[paste0(id,"_date")]]
-      # mytime = strftime(input[[paste0(id,"_time")]], format="%H:%M")
-      # x = parse_date_time(paste0(mydate," ",mytime), "Ymd HM", tz="Pacific/Auckland")
-      # elapsedmins = difftime(now(tzone="Pacific/Auckland"), x, units="mins")
-      # print(mydate)
-      # print(mytime)
-      # print(x)
-      # print(now(tzone="Pacific/Auckland"))
-      # print(elapsedmins)
-      
       x = getElapsedTime("StrokeOnsetTime")
-      
       if (!is.na(x)) {
         runjs(sprintf("clock[0].setTime(%i); clock[0].start();", x*60))
       }
@@ -175,10 +166,6 @@ shinyServer(function(input, output, session) {
         runjs(sprintf("clock[1].setTime(%i); clock[1].start();", x*60))
       }
     }
-  })
-  
-  output$onsetGage = renderDkjustgage({
-    dkjustgage(getElapsedTime("StrokeOnsetTime"),min=0,max=60)
   })
   
   # TIME

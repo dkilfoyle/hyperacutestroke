@@ -17,12 +17,13 @@ shinyUI(fluidPage(
       titledPanel("Patients",
         actionButton("btnNewPatient","Start New Patient",width="100%", class="btn btn-success"),
         h4("OR", style="text-align:center"),
-        selectInput("NHI", "Select Existing Active NHI", choices=c())),
+        selectInput("NHI", "Select Existing Active NHI", choices=c()),
+        actionButton("btnSaveCurrentPatient","Save")),
       
       conditionalPanel(condition="input.NHI != ''",
         titledPanel("Current Patient",
+          selectInput("CurrentLocation", "Location", choices=c("Unknown","PreHospital","Resus/CT", "Angio/PACU", "Wd63","DCC","Other")),
           flipclock("onsetTimer", "Time since stroke onset"),
-          # dkjustgageOutput("onsetGage", width="70%", height="150px"),
           flipclock("doorTimer", "Time since hospital arrival"))),
 
     width=3),
@@ -32,7 +33,10 @@ shinyUI(fluidPage(
       tabsetPanel(
         tabPanel("Help", style="margin-top: 20px",
           div(class="alert alert-info",
-            p("Click 'Start New Patient' to begin collecting data for a new hyperacute stroke patient, OR select an exisiting patient from the drop down list. Use the tabs above to select location relevant data entry."))),
+            p("Click 'Start New Patient' to begin collecting data for a new hyperacute stroke patient, OR select an exisiting patient from the drop down list. Use the tabs above to select location relevant data entry.")
+          ),
+          img(src="pathway.PNG", style="width:100%; height:100%")
+        ),
         
         tabPanel("Ambo", style="margin-top:20px",
           fluidRow(
@@ -55,9 +59,25 @@ shinyUI(fluidPage(
               radioButtons("pastaLAMSFace", "Facial Weakness", choices=c("Absent=0"=0,"Present=1"=1),width="100%", inline=T),
               radioButtons("pastaLAMSArm",  "Arm Weakness", choices=c("Absent=0"=0,"Drift=1"=1,"Falls rapidly=2"=2),width="100%",inline=T),
               radioButtons("pastaLAMSGrip", "Grip strength", choices=c("Normal=0"=0,"Weak=1"=1,"No grip=2"=2),width="100%",inline=T),
-              checkboxInput("pastaLAMS",    "Is the total LAMS >= 3?",width="100%"))),
+              checkboxInput("pastaLAMS",    "Is the total LAMS >= 3?",width="100%"),
+              hiddenTextInput("pastaResult", value="FAILED"))),
           fluidRow(
-            column(width=12, uiOutput("htmlPASTAResult")))),
+            column(width=12, 
+              conditionalPanel("input.pastaResult=='PASSED'",
+                div(class="alert alert-success",
+                  helpText("Patient meets all criteria, now ring 021-XXX-XXXX for final confirmation with oncall neurologist."),
+                  checkboxInput("pastaNeurologistAccepted", "Accepted by the oncall neurologist?", width="100%"),
+                  helpText("If the patient is accepted by the oncall neurologist transport patient directly to ACH resus. If not accepted transfer to nearest ED as usual."),
+                  datetimeInput("pastaDepartSceneTime", "Depart Scene Date and Time")
+                )
+              ),
+              conditionalPanel("input.pastaResult=='FAILED'",
+                div(class="alert alert-warning",
+                  p("Patient must meet all criteria above. If patient did not meet all criteria transfer to nearest ED as usual."))
+              )
+            )
+          )
+        ),
         
         tabPanel("Neurologist", style="margin-top:20px",
           div(class="alert alert-info",
@@ -67,28 +87,36 @@ shinyUI(fluidPage(
               p("Patient accepted for diversion: call XXX-XXXX and ask for 'Hyperacute Stroke Code: ETA resus xx min'"),
               p("Patient accepted for clot retrieval: call XXX-XXXX and ask for 'Stroke Clot Retrieval Code: ETA resus xx min'")),
           titledPanel("PASTA and Prehospital",
-            selectInput("pastaNeurologistDecision","PreHospital Triage Decision", choices=c(
+            selectInput("NeurologistTriageDecision","PreHospital Triage Decision", choices=c(
               "Not applicable",
               "Patient Accepted",
               "Diagnostic uncertainty",
               "Functional or comorbid status",
               "Unfavourable timeframe",
               "PreADHB imaging unfavourable"
-            )))),
+            ))),
+            img(src="prehospital.PNG", style="width:100%;height:100%")
+          ),
         
         tabPanel("Resus", style="margin-top:20px",
           div(class="alert alert-info",
             p("Patient should be briefly examined for ABC on ambulance stretcher without connection to resus equipment. If stable patient to be taken on ambulance stretcher immediately to CT for CT + CTA. Send resus bed to collect patient after CT.")),
           
-          datetimeInput("HospitalArrivalTime", "Hospital Arrival Date and Time"),
-          datetimeInput("CTTime", "CT Date and Time"),
+          fluidRow(
+            column(6,
+              datetimeInput("HospitalArrivalTime", "Hospital Arrival Date and Time"),
+              datetimeInput("CTTime", "CT Date and Time"),
           
-          selectInput("selInitialDiagnosis", "Resus Diagnosis", choices=c("ICH","Ischemic stroke with LVO", "Ischemic stroke without LVO", "TIA", "Stroke Mimic", "Other")),
-          numericInput("NIHSS", "NIHSS", value=0),
+              selectInput("ResusDiagnosis", "Resus Diagnosis", choices=c("ICH","Ischemic stroke with LVO", "Ischemic stroke without LVO", "TIA", "Stroke Mimic", "Other")),
+              numericInput("NIHSS", "NIHSS", value=0),
           
-          checkboxInput("Thrombolysis", "Thrombolysed?"),
-          conditionalPanel(condition="input.Thrombolysis == true",
-            datetimeInput("ThrombolysisTime","Thrombolysis Date and Time"))),
+              checkboxInput("Thrombolysis", "Thrombolysed?"),
+              conditionalPanel(condition="input.Thrombolysis == true",
+                datetimeInput("ThrombolysisTime","Thrombolysis Date and Time"))),
+            column(6,
+              img(src="inhospital.PNG", style="width:100%;height:100%"))
+          ) # fluidrow
+        ), # tabpanel Resus
           
         tabPanel("Angio", style="margin-top:20px",
           checkboxInput("ClotRetrieval", "Clot retrieval or angiography performed?"),

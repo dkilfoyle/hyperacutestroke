@@ -123,17 +123,3 @@ datetimeInput = function(inputId, label, datevalue = NULL, datemin = NULL, datem
   )
 }
 
-updateDateInput2 = function (session, inputId, label = NULL, value = NULL, min = NULL, max = NULL) 
-{
-  formatDate <- function(x) {
-    if (is.null(x)) 
-      return(NULL)
-    format(as.Date(x, tz="Pacific/Auckland"), "%Y-%m-%d")
-  }
-  value <- formatDate(value)
-  min <- formatDate(min)
-  max <- formatDate(max)
-  message <- shiny:::dropNulls(list(label = label, value = value, min = min, 
-                            max = max))
-  session$sendInputMessage(inputId, message)
-}

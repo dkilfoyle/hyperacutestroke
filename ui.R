@@ -17,14 +17,14 @@ shinyUI(fluidPage(
       titledPanel("Patients",
         actionButton("btnNewPatient","Start New Patient",width="100%", class="btn btn-success"),
         h4("OR", style="text-align:center"),
-        selectInput("NHI", "Select Existing Active NHI", choices=c()),
-        actionButton("btnSaveCurrentPatient","Save")),
+        selectInput("NHI", "Select Existing Active NHI", choices=c())),
       
       conditionalPanel(condition="input.NHI != ''",
         titledPanel("Current Patient",
           selectInput("CurrentLocation", "Location", choices=c("Unknown","PreHospital","Resus/CT", "Angio/PACU", "Wd63","DCC","Other")),
           flipclock("onsetTimer", "Time since stroke onset"),
-          flipclock("doorTimer", "Time since hospital arrival"))),
+          flipclock("doorTimer", "Time since hospital arrival"),
+          actionButton("btnSaveCurrentPatient","Save Changes", width="100%", class="btn btn-alert", style="margin-top:20px"))),
 
     width=3),
 
@@ -98,6 +98,30 @@ shinyUI(fluidPage(
             img(src="prehospital.PNG", style="width:100%;height:100%")
           ),
         
+        tabPanel("Nurse", style="margin-top:20px",
+          div(class="alert alert-warning",
+            p("Alpha version only. Needs nursing input")),
+          titledPanel("Prehospital Checklist",
+            checkboxInput("nurseNHI", "If NHI available call admitting to have patient registered as neurology expected arrival. If possible pre-print stickers. This step is particularly important for clot retrieval patients from other DHBs.", width="100%"),
+            checkboxInput("nurseBedspace", "Ensure bedspace available in the Wd63 hyperacute unit", width="100%"),
+            checkboxInput("nursePreprint", "Pre-print Thrombolysis Documents, Consent and NIHSS scoring sheets: insert link here", width="100%"),
+            checkboxInput("nurseAwait", "Await patient in resus and escort. PASTA patients will require a brief ABC assessment. Then help escort patient to CT", width="100%")),
+          titledPanel("Thrombolysis Checklist",
+            checkboxInput("nurseThrombolysisBP", "Blood pressure within target range?", width="100%"),
+            checkboxInput("nurseThrombolysisWt", "Obtain or guess patient weight and calculate dose", width="100%"),
+            numericInput("nurseWeight", "Patient Weight (kg)", NA),
+            numericInput("nurseAlteplaseTotalDose", "Alteplase Total Dose (mg)", NA),
+            numericInput("nurseAlteplaseTotalDose", "Alteplase 10% loading dose (mg)", NA),
+            numericInput("nurseAlteplaseTotalDose", "Alteplase 90% 1 hour infusion dose (mg)", NA),
+            checkboxInput("nurseConsent","Has consent been obtained?", width="100%")),
+          titledPanel("Clot Retrieval/Angio Checklist",
+            p("Work in progress..."),
+            checkboxInput("nurseAngioBed", "Order a ward 63 be bought down to angio", width="100%")),
+          titledPanel("Ward Checklist",
+            p("Work in progress..."),
+            p("See intranet for post thrombolysis and post clot retrieval management pathways", width="100%"))
+        ),
+        
         tabPanel("Resus", style="margin-top:20px",
           div(class="alert alert-info",
             p("Patient should be briefly examined for ABC on ambulance stretcher without connection to resus equipment. If stable patient to be taken on ambulance stretcher immediately to CT for CT + CTA. Send resus bed to collect patient after CT.")),
@@ -108,7 +132,7 @@ shinyUI(fluidPage(
               datetimeInput("CTTime", "CT Date and Time"),
           
               selectInput("ResusDiagnosis", "Resus Diagnosis", choices=c("ICH","Ischemic stroke with LVO", "Ischemic stroke without LVO", "TIA", "Stroke Mimic", "Other")),
-              numericInput("NIHSS", "NIHSS", value=0),
+              numericInput("NIHSS", "NIHSS", value=NA),
           
               checkboxInput("Thrombolysis", "Thrombolysed?"),
               conditionalPanel(condition="input.Thrombolysis == true",
@@ -145,8 +169,17 @@ shinyUI(fluidPage(
             "Other DHB",
             "Other location"
           )),
-          textInput("MRS3months", "MRS at 3 months"),
-          checkboxInput("Completed", "Patient record completed", value=F)
+          selectInput("MRS3months", "MRS at 3 months", choices=c(
+            "Unknown=-1"=-1,
+            "No symptoms=0"=0, 
+            "Symptoms but no disability=1"=1,
+            "Mild disability but independent ADL=2"=2,
+            "Moderate disability but able to walk=3"=3,
+            "Severe disability, need assist all ADL=4"=4,
+            "Bedridden, private hospital=5"=5,
+            "Dead=6"=6), selected=""),
+          checkboxInput("Completed", "Patient record completed", value=F),
+          p("KPIs")
         ),
         
         id="mainTabset"
